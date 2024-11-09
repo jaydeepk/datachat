@@ -1,0 +1,27 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# MacOS metadata files
+.DS_Store
+
+# Virtual environment directories
+.venv/
+
+# VS Code settings
+.vscode/
+
+# Python packaging files
+*.egg-info/
+.eggs/
+*.egg
+*.whl
+build/
+dist/
+pip-wheel-metadata/
+
+# PyInstaller artifacts
+*.manifest
+*.spec
+
