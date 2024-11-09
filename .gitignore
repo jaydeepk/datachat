@@ -25,3 +25,7 @@ pip-wheel-metadata/
 *.manifest
 *.spec
 
+# Environment files
+.env*
+
+

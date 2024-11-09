@@ -1,3 +1,5 @@
+from ast import Tuple
+from importlib import metadata
 from typing import Dict, List
 from pinecone import Pinecone, ServerlessSpec
 from openai import OpenAI
@@ -6,27 +8,13 @@ import os
 
 load_dotenv()
 
-class SessionEmbedder:
-    def __init__(self, index_name: str):
+class SessionEmbedding:
+    def __init__(self):
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        self.index_name = index_name
-        self.ensure_index_exists()
-        self.index = self.pc.Index(index_name)
     
-    def ensure_index_exists(self):
-        if self.index_name not in self.pc.list_indexes().names():
-            self.pc.create_index(
-                name=self.index_name,
-                dimension=1536,  # OpenAI embedding dimension
-                metric='cosine',
-                spec=ServerlessSpec(
-                    cloud='aws',
-                    region='us-east-1'
-                )
-            )
     
-    def embed_sessions(self, sessions: List[Dict]):
+    def generate(self, sessions: List[Dict]) -> List[tuple]:
+        vector_embeddings: List[tuple]= []
         for session in sessions:
             text = f"Title: {session['title']}\nSpeaker: {session['nominator']}\nDate: {session['timeslot']}"
             embedding = self.client.embeddings.create(
@@ -42,9 +30,10 @@ class SessionEmbedder:
             }
             
             vector_id = f"session_{session['id']}"
+            
+            vector_embeddings.append((vector_id, embedding, metadata))
+            
+        return vector_embeddings
+
         
-            self.index.upsert(vectors=[(
-                vector_id,   
-                embedding,   
-                metadata    
-            )])
+            

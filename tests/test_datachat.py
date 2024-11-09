@@ -1,9 +1,12 @@
 import json
+from openai import embeddings
 import pytest
 from datachat.data_chat import DataChat
 import os
 
-from datachat.session_embedder import SessionEmbedder
+from datachat.session_embedding import SessionEmbedding
+from datachat.store import vector_store
+from datachat.store.pinecone_store import PineconeStore
 
 # Sample data
 DATA = """
@@ -35,11 +38,14 @@ DATA = """
 ]
 """
 
+
 sessions = json.loads(DATA)
-index_name = os.getenv('DATACHAT_INDEX')
-embedder = SessionEmbedder(index_name)
-embedder.embed_sessions(sessions)
-data_chat_bot =  DataChat(index_name)   
+vectors = SessionEmbedding().generate(sessions)
+
+vector_store = PineconeStore(os.getenv('DATACHAT_INDEX'))
+vector_store.upsert(vectors)
+
+data_chat_bot =  DataChat(vector_store)   
 
 def test_query_speaker_sessions():
     """Test querying sessions by speaker"""
