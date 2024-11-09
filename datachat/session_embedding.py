@@ -26,7 +26,8 @@ class SessionEmbedding:
             metadata = {
                 'title': session['title'],
                 'speaker': session['nominator'],
-                'date': session['timeslot']
+                'date': session['timeslot'],
+                'type': session['type']
             }
             
             vector_id = f"session_{session['id']}"

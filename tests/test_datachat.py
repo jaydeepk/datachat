@@ -51,6 +51,7 @@ def test_query_speaker_sessions():
     """Test querying sessions by speaker"""
     query = "What sessions is James Smith presenting?"
     response = data_chat_bot.generate_response(query)
+    print_question_and_answer(query, response)
     
     assert "Future of AI" in response
     assert "22-Oct-2024 at 09:00" in response
@@ -59,14 +60,16 @@ def test_query_date_sessions():
     """Test querying sessions by date"""
     query = "What sessions are happening on October 22nd?"
     response = data_chat_bot.generate_response(query)
+    print_question_and_answer(query, response)
     
     assert "Future of AI" in response
     assert "Agile in Practice" in response
 
 def test_query_session_type():
     """Test querying by session type"""
-    query = "What keynote sessions are there?"
+    query = "Which are the keynote sessions?"
     response = data_chat_bot.generate_response(query)
+    print_question_and_answer(query, response)
     
     assert "Future of AI" in response
     assert "James Smith" in response
@@ -76,7 +79,14 @@ def test_query_non_existent_speaker():
     """Test querying for a speaker that doesn't exist"""
     query = "What sessions is Alice Brown presenting?"
     response = data_chat_bot.generate_response(query)
+    print_question_and_answer(query, response)
     
     assert "no sessions" in response.lower() or "not presenting" in response.lower()
+    
+def print_question_and_answer(question:str, answer:str):
+    print()
+    print(question)
+    print(answer)
+    print()
 
 
