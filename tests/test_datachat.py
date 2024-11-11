@@ -4,7 +4,8 @@ import pytest
 from datachat.data_chat import DataChat
 import os
 
-from datachat.session_embedding import SessionEmbedding
+from datachat.embeddings.models.open_ai_embedding_model import OpenAIEmbeddingModel
+from tests.session_embedding import SessionEmbedding
 from datachat.store import vector_store
 from datachat.store.pinecone_store import PineconeStore
 
@@ -40,7 +41,9 @@ DATA = """
 
 
 sessions = json.loads(DATA)
-vectors = SessionEmbedding().generate(sessions)
+embedding_model = OpenAIEmbeddingModel("text-embedding-ada-002")
+session_embedding = SessionEmbedding(embedding_model)
+vectors = session_embedding.create(sessions)
 
 vector_store = PineconeStore(os.getenv('DATACHAT_INDEX'))
 vector_store.upsert(vectors)
