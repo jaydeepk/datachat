@@ -1,4 +1,4 @@
-from datachat.embeddings.models.embedding_model import EmbeddingModel
+from datachat.embeddings.models.model import Model
 
 
 from abc import ABC, abstractmethod
@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Tuple
 class StructuredEmbedding(ABC):
     """Base class for converting structured data into semantic embeddings"""
 
-    def __init__(self, embedding_model: EmbeddingModel):
-        self.embedding_model = embedding_model
+    def __init__(self, model: Model):
+        self.model = model
 
     @abstractmethod
     def get_text(self, item: Dict[str, Any]) -> str:
@@ -32,7 +32,7 @@ class StructuredEmbedding(ABC):
         return [
             (
                 self.get_id(item),
-                self.embedding_model.create_embedding(self.get_text(item)),
+                self.model.create_embedding(self.get_text(item)),
                 self.get_metadata(item)
             )
             for item in items

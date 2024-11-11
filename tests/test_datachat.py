@@ -2,7 +2,7 @@ import json
 from typing import List, Dict, Any
 import pytest
 from datachat.data_chat import DataChat
-from datachat.embeddings.models.open_ai_embedding_model import OpenAIEmbeddingModel
+from datachat.embeddings.models.open_ai_model import OpenAIModel
 from tests.session_embedding import SessionEmbedding
 from datachat.store.pinecone_store import PineconeStore
 
@@ -45,14 +45,24 @@ class TestDataChat:
     @pytest.fixture(scope="class")
     def data_chat_bot(self, sample_sessions: List[Dict[str, Any]], pinecone_index: str) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
-        embedding_model = OpenAIEmbeddingModel("text-embedding-ada-002")
-        session_embedding = SessionEmbedding(embedding_model)
-        vectors = session_embedding.create(sample_sessions)
-
+        
+        system_prompt = """You are a conference assistant. 
+                When displaying dates and times:
+                - Always include both date and time if available in the format DD-MMM-YYYY HH:mm
+                - Use 24-hour format for time
+                
+                For questions about total counts:
+                - Return the actual count of all sessions in the provided context
+                - Be precise with numbers
+                
+                Ensure all relevant information from the context is included in your responses."""
+                
+        model = OpenAIModel(system_prompt, "text-embedding-ada-002", "gpt-4")
+        vectors = SessionEmbedding(model).create(sample_sessions)
         vector_store = PineconeStore(pinecone_index)
         vector_store.upsert(vectors)
         
-        return DataChat(vector_store)
+        return DataChat(vector_store, model, system_prompt)
 
     @pytest.fixture(scope="class")
     def pinecone_index(self) -> str:
