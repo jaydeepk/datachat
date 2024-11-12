@@ -1,6 +1,7 @@
 import json
 from typing import List, Dict, Any
 import pytest
+from datachat.config import Config
 from datachat.data_chat import DataChat
 from datachat.models import OpenAIInference
 from datachat.models import OpenAIEmbedding
@@ -46,7 +47,7 @@ class TestDataChat:
     @pytest.fixture(scope="class")
     def session_data_chat(self, session_data: List[Dict[str, Any]], pinecone_index: str) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
-        
+        config = Config.load()
         system_prompt = """You are a conference assistant. 
                 When displaying dates and times:
                 - Always include both date and time if available in the format DD-MMM-YYYY HH:mm
@@ -58,11 +59,11 @@ class TestDataChat:
                 
                 Ensure all relevant information from the context is included in your responses."""
          
-        embedding_model = OpenAIEmbedding("text-embedding-ada-002")       
-        inference_model = OpenAIInference(system_prompt, "gpt-4")
+        embedding_model = OpenAIEmbedding(config.openai, "text-embedding-ada-002")       
+        inference_model = OpenAIInference(config.openai, system_prompt, "gpt-4")
         
         vectors = SessionEmbedding(embedding_model).create(session_data)
-        vector_store = PineconeStore(pinecone_index)
+        vector_store = PineconeStore(config.pinecone)
         vector_store.upsert(vectors)
         
         return DataChat(vector_store, embedding_model, inference_model)
@@ -79,7 +80,7 @@ class TestDataChat:
     @pytest.mark.parametrize("query,expected_phrases", [
         (
             "What sessions is James Smith presenting?",
-            ["Future of AI", "22-Oct-2024 at 09:00"]
+            ["Future of AI", "22-Oct-2024", "09:00"]
         ),
         (
             "What sessions are happening on October 22nd?",

@@ -1,8 +1,11 @@
+from logging import config
 import os
 from typing import List, Dict, Any
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
+from pydantic import conbytes
 
+from datachat.config import PineconeConfig
 from datachat.exceptions import VectorStoreError
 
 from .vector_store import VectorStore
@@ -10,22 +13,22 @@ from .vector_store import VectorStore
 class PineconeStore(VectorStore):
     """Pinecone vector store implementation"""
     
-    def __init__(self, index_name: str):
-        self.pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        self.index_name = index_name
+    def __init__(self, config:PineconeConfig):
+        self.pc = Pinecone(api_key=config.api_key)
+        self.config = config
         self.ensure_index_exists()
-        self.index = self.pc.Index(index_name)
+        self.index = self.pc.Index(config.index_name)
     
         
     def ensure_index_exists(self):
-        if self.index_name not in self.pc.list_indexes().names():
+        if self.config.index_name not in self.pc.list_indexes().names():
             self.pc.create_index(
-                name=self.index_name,
+                name=self.config.index_name,
                 dimension=1536,  # OpenAI embedding dimension
                 metric='cosine',
                 spec=ServerlessSpec(
                     cloud='aws',
-                    region=os.getenv('PINECONE_ENVIRONMENT')
+                    region=self.config.region
                 )
             )
     

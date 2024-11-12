@@ -23,7 +23,20 @@ class DataChat:
         self.embedding_model = embedding_model
         self.inference_model = inference_model
     
-    def search(self, query: str, top_k: int = 100) -> List[Dict]:
+    def generate_response(self, user_query: str) -> str:
+        """Generate a response based on the user query and relevant context.
+        
+        Args:
+            user_query: User's question about the data
+            
+        Returns:
+            Generated response from the chat model
+        """
+        context = self.__search(user_query)
+        return self.inference_model.generate_response(context, user_query)
+    
+    
+    def __search(self, query: str, top_k: int = 100) -> List[Dict]:
         """Search for relevant items using the query.
         
         Args:
@@ -35,15 +48,3 @@ class DataChat:
         """
         query_embedding = self.embedding_model.create_embedding(query)
         return self.vector_store.search(query_embedding, top_k)
-    
-    def generate_response(self, user_query: str) -> str:
-        """Generate a response based on the user query and relevant context.
-        
-        Args:
-            user_query: User's question about the data
-            
-        Returns:
-            Generated response from the chat model
-        """
-        context = self.search(user_query)
-        return self.inference_model.generate_response(context, user_query)

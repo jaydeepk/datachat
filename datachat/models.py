@@ -6,6 +6,8 @@ from typing import List
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from datachat.config import OpenAIConfig
+
 
 class EmbeddingModel(ABC):
     """Model for generating embeddings"""
@@ -28,9 +30,9 @@ class InferenceModel(ABC):
     
     
 class OpenAIEmbedding(EmbeddingModel):
-    def __init__(self, model_name: str = "text-embedding-ada-002"):
+    def __init__(self, config:OpenAIConfig, model_name: str = "text-embedding-ada-002"):
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.client = OpenAI(api_key=config.api_key)
         self.model_name = model_name
     
     def create_embedding(self, text: str) -> List[float]:
@@ -55,9 +57,9 @@ class OpenAIInference(InferenceModel):
         
         Ensure all relevant information from the context is included in your responses."""
 
-    def __init__(self, system_prompt:str,  model_name: str="gpt-4"):
+    def __init__(self, config:OpenAIConfig, system_prompt:str,  model_name: str="gpt-4"):
         load_dotenv()
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.client = OpenAI(api_key=config.api_key)
         self.system_prompt = system_prompt or self.DEFAULT_SYSTEM_PROMPT
         self.model_name = model_name
 
