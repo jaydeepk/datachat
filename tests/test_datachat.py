@@ -2,7 +2,8 @@ import json
 from typing import List, Dict, Any
 import pytest
 from datachat.data_chat import DataChat
-from datachat.embeddings.models.open_ai_model import OpenAIModel
+from datachat.models import OpenAIInference
+from datachat.models import OpenAIEmbedding
 from tests.session_embedding import SessionEmbedding
 from datachat.store.pinecone_store import PineconeStore
 
@@ -10,7 +11,7 @@ class TestDataChat:
     """Tests for the DataChat functionality with session data"""
 
     @pytest.fixture(scope="class")
-    def sample_sessions(self) -> List[Dict[str, Any]]:
+    def session_data(self) -> List[Dict[str, Any]]:
         """Fixture providing sample session data"""
         DATA = """
         [
@@ -43,7 +44,7 @@ class TestDataChat:
         return json.loads(DATA)
 
     @pytest.fixture(scope="class")
-    def data_chat_bot(self, sample_sessions: List[Dict[str, Any]], pinecone_index: str) -> DataChat:
+    def session_data_chat(self, session_data: List[Dict[str, Any]], pinecone_index: str) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
         
         system_prompt = """You are a conference assistant. 
@@ -56,13 +57,15 @@ class TestDataChat:
                 - Be precise with numbers
                 
                 Ensure all relevant information from the context is included in your responses."""
-                
-        model = OpenAIModel(system_prompt, "text-embedding-ada-002", "gpt-4")
-        vectors = SessionEmbedding(model).create(sample_sessions)
+         
+        embedding_model = OpenAIEmbedding("text-embedding-ada-002")       
+        inference_model = OpenAIInference(system_prompt, "gpt-4")
+        
+        vectors = SessionEmbedding(embedding_model).create(session_data)
         vector_store = PineconeStore(pinecone_index)
         vector_store.upsert(vectors)
         
-        return DataChat(vector_store, model, system_prompt)
+        return DataChat(vector_store, embedding_model, inference_model)
 
     @pytest.fixture(scope="class")
     def pinecone_index(self) -> str:
@@ -87,10 +90,10 @@ class TestDataChat:
             ["Future of AI", "James Smith", "keynote"]
         )
     ])
-    def test_successful_queries(self, data_chat_bot: DataChat, query: str, expected_phrases: List[str]):
+    def test_successful_queries(self, session_data_chat: DataChat, query: str, expected_phrases: List[str]):
         """Test various successful query scenarios"""
         # Generate response
-        response = data_chat_bot.generate_response(query)
+        response = session_data_chat.generate_response(query)
         
         # Print query and response
         print(f"\nQuery: {query}")
@@ -100,10 +103,10 @@ class TestDataChat:
         for phrase in expected_phrases:
             assert phrase in response, f"Expected phrase '{phrase}' not found in response"
 
-    def test_query_non_existent_speaker(self, data_chat_bot: DataChat):
+    def test_query_non_existent_speaker(self, session_data_chat: DataChat):
         """Test querying for a speaker that doesn't exist"""
         query = "What sessions is Alice Brown presenting?"
-        response = data_chat_bot.generate_response(query)
+        response = session_data_chat.generate_response(query)
         
         # Print query and response
         print(f"\nQuery: {query}")

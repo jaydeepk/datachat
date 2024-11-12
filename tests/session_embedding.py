@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-from datachat.embeddings.structured_embedding import StructuredEmbedding
+from datachat.structured_embedding import StructuredEmbedding
 
 class SessionEmbedding(StructuredEmbedding):
     """Semantic embedding for session data"""

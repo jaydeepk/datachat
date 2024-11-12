@@ -11,7 +11,6 @@ class PineconeStore(VectorStore):
     """Pinecone vector store implementation"""
     
     def __init__(self, index_name: str):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.pc = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
         self.index_name = index_name
         self.ensure_index_exists()

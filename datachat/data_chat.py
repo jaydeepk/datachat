@@ -1,34 +1,29 @@
 from typing import Dict, List, Optional
 from openai import OpenAI
-from dotenv import load_dotenv
-import os
 
-from datachat.embeddings.models import model
-from datachat.embeddings.models.model import Model
+from datachat.models import EmbeddingModel, InferenceModel
 from datachat.store.vector_store import VectorStore
-
-load_dotenv()
 
 class DataChat:
    
     def __init__(
         self, 
         vector_store: VectorStore,
-        model: Model,
-        system_prompt: Optional[str] = None
+        embedding_model: EmbeddingModel,
+        inference_model: InferenceModel
     ):
         """Initialize DataChat with configurable parameters.
         
         Args:
             vector_store: Vector store for searching embeddings
             system_prompt: Custom system prompt for the chat model
-            embedding_model: model to use for generating embeddings
+            model: model to use for generating embeddings and completions
         """
         self.vector_store = vector_store
-        self.system_prompt = system_prompt or self.DEFAULT_SYSTEM_PROMPT
-        self.model = model
+        self.embedding_model = embedding_model
+        self.inference_model = inference_model
     
-    def search_sessions(self, query: str, top_k: int = 100) -> List[Dict]:
+    def search(self, query: str, top_k: int = 100) -> List[Dict]:
         """Search for relevant items using the query.
         
         Args:
@@ -38,7 +33,7 @@ class DataChat:
         Returns:
             List of relevant items with their metadata
         """
-        query_embedding = self.model.create_embedding(query)
+        query_embedding = self.embedding_model.create_embedding(query)
         return self.vector_store.search(query_embedding, top_k)
     
     def generate_response(self, user_query: str) -> str:
@@ -50,5 +45,5 @@ class DataChat:
         Returns:
             Generated response from the chat model
         """
-        context = self.search_sessions(user_query)
-        return self.model.create_completion(context, user_query)
+        context = self.search(user_query)
+        return self.inference_model.generate_response(context, user_query)
