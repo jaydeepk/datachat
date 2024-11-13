@@ -1,12 +1,14 @@
 import json
 from typing import List, Dict, Any
+from xml.dom.minidom import Document
 import pytest
 from datachat.config import Config
 from datachat.data_chat import DataChat
 from datachat.models import OpenAIInference
 from datachat.models import OpenAIEmbedding
-from tests.session_embedding import SessionEmbedding
+from tests.session_document import SessionDocument
 from datachat.store.pinecone_store import PineconeStore
+
 
 class TestDataChat:
     """Tests for the DataChat functionality with session data"""
@@ -45,7 +47,9 @@ class TestDataChat:
         return json.loads(DATA)
 
     @pytest.fixture(scope="class")
-    def session_data_chat(self, session_data: List[Dict[str, Any]], pinecone_index: str) -> DataChat:
+    def session_data_chat(
+        self, session_data: List[Dict[str, Any]], pinecone_index: str
+    ) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
         config = Config.load()
         system_prompt = """You are a conference assistant. 
@@ -58,60 +62,65 @@ class TestDataChat:
                 - Be precise with numbers
                 
                 Ensure all relevant information from the context is included in your responses."""
-         
-        embedding_model = OpenAIEmbedding(config.openai, "text-embedding-ada-002")       
-        inference_model = OpenAIInference(config.openai, system_prompt, "gpt-4")
-        
-        vectors = SessionEmbedding(embedding_model).create(session_data)
-        vector_store = PineconeStore(config.pinecone)
-        vector_store.upsert(vectors)
-        
-        return DataChat(vector_store, embedding_model, inference_model)
+
+        session_documents = [SessionDocument(session) for session in session_data]
+        vector_store = PineconeStore(config)
+        vector_store.upsert(session_documents)
+        return DataChat(vector_store, system_prompt)
 
     @pytest.fixture(scope="class")
     def pinecone_index(self) -> str:
         """Fixture providing Pinecone index name"""
         import os
-        index_name = os.getenv('DATACHAT_INDEX')
+
+        index_name = os.getenv("DATACHAT_INDEX")
         if not index_name:
             pytest.skip("DATACHAT_INDEX environment variable not set")
         return index_name
 
-    @pytest.mark.parametrize("query,expected_phrases", [
-        (
-            "What sessions is James Smith presenting?",
-            ["Future of AI", "22-Oct-2024", "09:00"]
-        ),
-        (
-            "What sessions are happening on October 22nd?",
-            ["Future of AI", "Agile in Practice"]
-        ),
-        (
-            "Which are the keynote sessions?",
-            ["Future of AI", "James Smith", "keynote"]
-        )
-    ])
-    def test_successful_queries(self, session_data_chat: DataChat, query: str, expected_phrases: List[str]):
+    @pytest.mark.parametrize(
+        "query,expected_phrases",
+        [
+            (
+                "What sessions is James Smith presenting?",
+                ["Future of AI", "22-Oct-2024", "09:00"],
+            ),
+            (
+                "What sessions are happening on October 22nd?",
+                ["Future of AI", "Agile in Practice"],
+            ),
+            (
+                "Which are the keynote sessions?",
+                ["Future of AI", "James Smith", "keynote"],
+            ),
+        ],
+    )
+    def test_successful_queries(
+        self, session_data_chat: DataChat, query: str, expected_phrases: List[str]
+    ):
         """Test various successful query scenarios"""
         # Generate response
         response = session_data_chat.generate_response(query)
-        
+
         # Print query and response
         print(f"\nQuery: {query}")
         print(f"Response: {response}\n")
-        
+
         # Assert expected phrases
         for phrase in expected_phrases:
-            assert phrase in response, f"Expected phrase '{phrase}' not found in response"
+            assert (
+                phrase in response
+            ), f"Expected phrase '{phrase}' not found in response"
 
     def test_query_non_existent_speaker(self, session_data_chat: DataChat):
         """Test querying for a speaker that doesn't exist"""
         query = "What sessions is Alice Brown presenting?"
         response = session_data_chat.generate_response(query)
-        
+
         # Print query and response
         print(f"\nQuery: {query}")
         print(f"Response: {response}\n")
-        
-        assert any(phrase in response.lower() for phrase in ["no sessions", "not presenting"]), \
-            "Response should indicate no sessions found"
+
+        assert any(
+            phrase in response.lower() for phrase in ["no sessions", "not presenting"]
+        ), "Response should indicate no sessions found"
