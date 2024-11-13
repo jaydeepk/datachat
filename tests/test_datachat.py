@@ -90,6 +90,10 @@ class TestDataChat:
                 ["Future of AI", "Agile in Practice"],
             ),
             (
+                "Of these how many sessions are on Agile?",
+                ["Agile in Practice"],
+            ),
+            (
                 "Which are the keynote sessions?",
                 ["Future of AI", "James Smith", "keynote"],
             ),
