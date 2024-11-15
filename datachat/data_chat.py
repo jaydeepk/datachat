@@ -1,9 +1,6 @@
 from typing import List, Optional
 
-import pinecone
-from sqlalchemy import null
 from datachat.document import Document
-from datachat.models import InferenceModel
 from datachat.store.pinecone_store import PineconeStore
 from datachat.store.vector_store import VectorStore
 from datachat.config import Config
@@ -16,38 +13,36 @@ class DataChat:
 
     def __init__(
         self,
-        documents: List[Document] = None,
-        vector_store: Optional[VectorStore] = None,
-        system_prompt: Optional[str] = None,
-        inference_model: Optional[InferenceModel] = None,
+        documents: List[Document],
+        system_prompt: Optional[str],
         config: Optional[Config] = None,
         memory_size: int = 3,  # Keep last 3 message pairs by default
     ):
-        """Initialize DataChat with configurable parameters.
+        """Initialize DataChat with documents and system prompt.
 
         Args:
-            vector_store: Vector store for searching embeddings
-            system_prompt: Custom system prompt for the chat model
-            model: model to use for generating embeddings and completions
+            documents: List of documents to process
+            system_prompt: System prompt for the chat model
+            config: Optional configuration for OpenAI and Pinecone
+            chat_config: Optional chat-specific configuration
         """
-        if not (documents or vector_store):
-            raise ValueError("Either documents or vector_store must be provided")
-        
+
+        if not documents:
+            raise ValueError("Documents list cannot be empty")
+        if not system_prompt:
+            raise ValueError("System prompt cannot be empty")
+
         self.config = config or Config.load()
-        self.vector_store = vector_store or self._initialize_pinecone(documents)
-        self.inference_model = inference_model or OpenAIInference(
-            self.config.openai, system_prompt
-        )
+        self.vector_store = self._initialize_pinecone(documents)
+        self.inference_model = OpenAIInference(self.config.openai, system_prompt)
         # Initialize simple window memory
         self.memory = ConversationBufferWindowMemory(
             k=memory_size, return_messages=True
         )
 
-    def _initialize_pinecone(self, documents:List[Document]) -> VectorStore:
+    def _initialize_pinecone(self, documents: List[Document]) -> VectorStore:
         if documents is None:
-            raise Exception(
-                "Please provide a list of documents"
-            )
+            raise Exception("Please provide a list of documents")
         print()
         print("DataChat is initializing Pinecone db")
         pinecone_store = PineconeStore(self.config)
