@@ -47,9 +47,7 @@ class TestDataChat:
         return json.loads(DATA)
 
     @pytest.fixture(scope="class")
-    def session_data_chat(
-        self, session_data: List[Dict[str, Any]], pinecone_index: str
-    ) -> DataChat:
+    def session_data_chat(self, session_data: List[Dict[str, Any]]) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
         config = Config.load()
         system_prompt = """You are a conference assistant. 
@@ -64,9 +62,7 @@ class TestDataChat:
                 Ensure all relevant information from the context is included in your responses."""
 
         session_documents = [SessionDocument(session) for session in session_data]
-        vector_store = PineconeStore(config)
-        vector_store.upsert(session_documents)
-        return DataChat(vector_store, system_prompt)
+        return DataChat(documents=session_documents, system_prompt=system_prompt)
 
     @pytest.fixture(scope="class")
     def pinecone_index(self) -> str:
