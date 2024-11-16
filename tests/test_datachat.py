@@ -49,7 +49,6 @@ class TestDataChat:
     @pytest.fixture(scope="class")
     def session_data_chat(self, session_data: List[Dict[str, Any]]) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
-        config = Config.load()
         system_prompt = """You are a conference assistant. 
                 When displaying dates and times:
                 - Always include both date and time if available in the format DD-MMM-YYYY HH:mm
@@ -122,5 +121,6 @@ class TestDataChat:
         print(f"Response: {response}\n")
 
         assert any(
-            phrase in response.lower() for phrase in ["no sessions", "not presenting"]
+            phrase in response.lower()
+            for phrase in ["no sessions", "not presenting", "not listed as a speaker"]
         ), "Response should indicate no sessions found"

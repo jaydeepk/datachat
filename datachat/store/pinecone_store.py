@@ -41,9 +41,9 @@ class PineconeStore(VectorStore):
         try:
             vectors = [
                 (
-                    document.get_id(),
-                    self.embedding_model.create_embedding(document.get_text()),
-                    document.get_metadata(),
+                    document.id,
+                    self.embedding_model.create_embedding(document.text),
+                    document.metadata,
                 )
                 for document in documents
             ]

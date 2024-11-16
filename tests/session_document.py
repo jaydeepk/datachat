@@ -9,11 +9,18 @@ class SessionDocument(Document):
     def __init__(self, item: Dict[str, Any]) -> None:
         self.item = item
 
-    def get_text(self) -> str:
+    @property
+    def id(self) -> str:
+        """Create session identifier"""
+        return f"session_{self.item['id']}"
+
+    @property
+    def text(self) -> str:
         """Convert session data into textual representation"""
         return f"Title: {self.item['title']}\nSpeaker: {self.item['nominator']}\nDate: {self.item['timeslot']}"
 
-    def get_metadata(self) -> Dict[str, Any]:
+    @property
+    def metadata(self) -> Dict[str, Any]:
         """Extract session metadata"""
         return {
             "title": self.item["title"],
@@ -21,7 +28,3 @@ class SessionDocument(Document):
             "date": self.item["timeslot"],
             "type": self.item["type"],
         }
-
-    def get_id(self) -> str:
-        """Create session identifier"""
-        return f"session_{self.item['id']}"
