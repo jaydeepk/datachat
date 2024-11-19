@@ -6,7 +6,7 @@ from typing import List
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from datachat.config import OpenAIConfig
+from datachat.core.config import OpenAIConfig
 
 
 class EmbeddingModel(ABC):
@@ -57,19 +57,22 @@ class OpenAIInference(InferenceModel):
         Ensure all relevant information from the context is included in your responses."""
 
     def __init__(
-        self, config: OpenAIConfig, system_prompt: str, model_name: str = "gpt-4"
+        self, config: OpenAIConfig, model_name: str = "gpt-4"
     ):
         load_dotenv()
         self.client = OpenAI(api_key=config.api_key)
-        self.system_prompt = system_prompt or self.DEFAULT_SYSTEM_PROMPT
         self.model_name = model_name
 
     def generate_response(
-        self, context: List[dict], user_query: str, history_text: str = ""
+        self,
+        context: List[dict],
+        user_query: str,
+        system_prompt: str,
+        history_text: str = "",
     ) -> str:
         """Generate completion for given query"""
 
-        prompt = f"""{'System: ' + self.system_prompt}
+        prompt = f"""{'System: ' + system_prompt}
                         Previous conversation:
                         {history_text}
 

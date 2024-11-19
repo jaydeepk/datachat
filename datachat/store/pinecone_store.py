@@ -1,14 +1,9 @@
-from logging import config
-import os
 from typing import List, Dict, Any
-from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
-from pydantic import conbytes
 
-from datachat.config import Config, PineconeConfig
-from datachat.exceptions import VectorStoreError
-from datachat.models import EmbeddingModel, OpenAIEmbedding
-from datachat.document import Document
+from datachat.core.config import Config, PineconeConfig
+from datachat.core.exceptions import VectorStoreError
+from datachat.core.models import EmbeddingModel, OpenAIEmbedding
 
 from .vector_store import VectorStore
 
@@ -16,46 +11,36 @@ from .vector_store import VectorStore
 class PineconeStore(VectorStore):
     """Pinecone vector store implementation"""
 
-    def __init__(self, config: Config, embedding_model: EmbeddingModel = None):
-        self.embedding_model = (
-            embedding_model
-            if embedding_model is not None
-            else OpenAIEmbedding(config.openai)
-        )
-        self.pc = Pinecone(api_key=config.pinecone.api_key)
+    def __init__(self, config: PineconeConfig):
+        self.pc = Pinecone(api_key=config.api_key)
         self.config = config
-        self.ensure_index_exists()
-        self.index = self.pc.Index(config.pinecone.index_name)
 
-    def ensure_index_exists(self):
-        if self.config.pinecone.index_name not in self.pc.list_indexes().names():
-            self.pc.create_index(
-                name=self.config.pinecone.index_name,
+    def get_index(self, index_name):
+        indexes = self.pc.list_indexes()
+        if index_name not in indexes.names():
+            return self.pc.create_index(
+                name=index_name,
                 dimension=1536,  # OpenAI embedding dimension
                 metric="cosine",
-                spec=ServerlessSpec(cloud="aws", region=self.config.pinecone.region),
+                spec=ServerlessSpec(cloud="aws", region=self.config.region),
             )
+        return self.pc.Index(index_name)
 
-    def upsert(self, documents: List[Document]) -> None:
+    def upsert(self, index_name: str, vectors: List[tuple]) -> None:
         """Upsert vectors to Pinecone"""
         try:
-            vectors = [
-                (
-                    document.id,
-                    self.embedding_model.create_embedding(document.text),
-                    document.metadata,
-                )
-                for document in documents
-            ]
-            self.index.upsert(vectors=vectors)
+            index = self.get_index(index_name)
+            index.upsert(vectors=vectors)
         except Exception as e:
             raise VectorStoreError(f"Failed to upsert vectors: {str(e)}")
 
-    def search(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+    def search(
+        self, index_name: str, query_vector: List[float], top_k: int
+    ) -> List[Dict[str, Any]]:
         """Search for similar vectors in Pinecone"""
         try:
-            query_vector = self.embedding_model.create_embedding(query)
-            results = self.index.query(
+            index = self.pc.Index(index_name)
+            results = index.query(
                 vector=query_vector, top_k=top_k, include_metadata=True
             )
             return [match.metadata for match in results.matches]

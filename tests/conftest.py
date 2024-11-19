@@ -3,7 +3,7 @@ import os
 import pytest
 from dotenv import load_dotenv
 
-from datachat.config import Config, Environment
+from datachat.core.config import Config, Environment
 
 def pytest_sessionstart(session):
     """Load test configuration at session start"""
