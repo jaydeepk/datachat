@@ -44,29 +44,33 @@ class TestDataChat:
     @pytest.fixture(scope="class")
     def data_chat(self, session_data: List[Dict[str, Any]]) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
-        system_prompt = """You are a conference assistant. 
-                When displaying dates and times:
-                - Always include both date and time if available in the format DD-MMM-YYYY HH:mm
-                - Use 24-hour format for time
-                
-                For questions about total counts:
-                - Return the actual count of all sessions in the provided context
-                - Be precise with numbers
-                
-                Ensure all relevant information from the context is included in your responses."""
-
-        session_documents = [SessionDocument(session) for session in session_data]
-        data_chat = DataChat()
-        data_chat.register("conf-sessions-test", session_documents, system_prompt)
-
-        yield data_chat
-
-        # This code runs after all tests are done
+        data_chat = None  # Initialize outside try block
+        
         try:
-            data_chat.delete_dataset("conf-sessions-test")
-            print("\nSuccessfully deleted conf-sessions-test dataset")
-        except Exception as e:
-            print(f"\nFailed to delete test dataset: {e}")
+            system_prompt = """You are a conference assistant. 
+                    When displaying dates and times:
+                    - Always include both date and time if available in the format DD-MMM-YYYY HH:mm
+                    - Use 24-hour format for time
+                    
+                    For questions about total counts:
+                    - Return the actual count of all sessions in the provided context
+                    - Be precise with numbers
+                    
+                    Ensure all relevant information from the context is included in your responses."""
+
+            session_documents = [SessionDocument(session) for session in session_data]
+            data_chat = DataChat()
+            data_chat.register("conf-sessions-test", session_documents, system_prompt)
+            
+            yield data_chat
+            
+        finally:
+            if data_chat:  # Only attempt cleanup if setup was successful
+                try:
+                    data_chat.delete_dataset("conf-sessions-test")
+                    print("\nSuccessfully deleted conf-sessions-test dataset")
+                except Exception as e:
+                    print(f"\nFailed to delete dataset: {e}")
 
     @pytest.mark.parametrize(
         "query,expected_phrases",
