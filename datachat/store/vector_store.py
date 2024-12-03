@@ -16,3 +16,8 @@ class VectorStore(ABC):
     def search(self, index_name: str, query: str, top_k: int) -> List[Dict[str, Any]]:
         """Search for similar vectors"""
         pass
+
+    @abstractmethod
+    def delete(self, index_name: str):
+        """Delete index"""
+        pass

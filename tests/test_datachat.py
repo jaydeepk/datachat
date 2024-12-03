@@ -58,7 +58,15 @@ class TestDataChat:
         session_documents = [SessionDocument(session) for session in session_data]
         data_chat = DataChat()
         data_chat.register("conf-sessions-test", session_documents, system_prompt)
-        return data_chat
+
+        yield data_chat
+
+        # This code runs after all tests are done
+        try:
+            data_chat.delete_dataset("conf-sessions-test")
+            print("\nSuccessfully deleted conf-sessions-test dataset")
+        except Exception as e:
+            print(f"\nFailed to delete test dataset: {e}")
 
     @pytest.mark.parametrize(
         "query,expected_phrases",

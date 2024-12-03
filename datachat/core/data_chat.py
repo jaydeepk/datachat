@@ -1,5 +1,6 @@
 from asyncio import sleep
-from typing import List, Optional
+import logging
+from typing import Dict, List, Optional
 
 from attr import dataclass
 
@@ -8,15 +9,9 @@ from datachat.store.pinecone_store import PineconeStore
 from datachat.store.vector_store import VectorStore
 from datachat.core.config import Config
 from datachat.core.models import OpenAIEmbedding, OpenAIInference
+from datachat.core.dataset_repository import Dataset, DatasetRepository
 
 from langchain.memory import ConversationBufferWindowMemory
-
-
-@dataclass
-class Dataset:
-    name: str
-    index_name: str
-    system_prompt: str
 
 
 class DataChat:
@@ -33,7 +28,7 @@ class DataChat:
         """
 
         self.config = config or Config.load()
-        self._datasets = {}
+        self.dataset_repo = DatasetRepository()
 
         print()
         self.vector_store = PineconeStore(self.config.pinecone)
@@ -48,9 +43,11 @@ class DataChat:
         self, dataset_name: str, documents: List[Document], system_prompt: str
     ):
         index_name = self._get_index_name(dataset_name)
-        self._datasets[dataset_name] = Dataset(dataset_name, index_name, system_prompt)
 
-        print()
+        self.dataset_repo.upsert_dataset(
+            Dataset(dataset_name, index_name, system_prompt)
+        )
+
         print("Upserting doucments in Pinecone db...")
         vectors = [
             (
@@ -68,7 +65,7 @@ class DataChat:
         print("Vectors are now indexed and ready for querying")
 
     def generate_response(self, dataset_name, user_query: str, top_k: int = 100) -> str:
-        """Generate a response based on the user query and relevant context.
+        """Generate a response for a dataset based on the user query and relevant context.
 
         Args:
             user_query: User's question about the data
@@ -77,7 +74,10 @@ class DataChat:
             Generated response from the chat model
         """
         # Get relevant context from vector store
-        dataset: Dataset = self._datasets[dataset_name]
+        dataset: Dataset = self.dataset_repo.get_dataset(dataset_name)
+        if not dataset:
+            raise Exception(f"Dataset {dataset_name} not found")
+
         query_vector = self.embedding_model.create_embedding(user_query)
         context = self.vector_store.search(dataset.index_name, query_vector, top_k)
 
@@ -99,6 +99,34 @@ class DataChat:
         return self.inference_model.generate_response(
             context, user_query, dataset.system_prompt, history_text
         )
+
+    def delete_dataset(self, dataset_name: str) -> None:
+        """Delete a dataset from both SQLite and Pinecone
+
+        Args:
+            dataset_name: Name of the dataset to delete
+
+        Raises:
+            ValueError: If dataset doesn't exist
+            Exception: If deletion fails
+        """
+        # Check if dataset exists
+        dataset: Dataset = self.dataset_repo.get_dataset(dataset_name)
+        if not dataset:
+            raise ValueError(f"Dataset '{dataset_name}' not found")
+
+        try:
+            # Delete from Pinecone first
+            self.vector_store.delete(dataset.index_name)
+
+            # Delete from SQLite
+            self.dataset_repo.delete_dataset(dataset_name)
+
+            logging.info(f"Successfully deleted dataset '{dataset_name}'")
+
+        except Exception as e:
+            logging.error(f"Failed to delete dataset '{dataset_name}': {str(e)}")
+            raise
 
     def _wait_for_indexing(self, timeout: int = 20, initial_delay: int = 5):
         """Wait for vectors to be indexed and queryable"""

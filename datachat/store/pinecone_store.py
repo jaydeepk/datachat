@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict, Any
 from pinecone import Pinecone, ServerlessSpec
 
@@ -46,3 +47,19 @@ class PineconeStore(VectorStore):
             return [match.metadata for match in results.matches]
         except Exception as e:
             raise VectorStoreError(f"Failed to search vectors: {str(e)}")
+
+    def delete(self, index_name: str):
+        try:
+            # Check if index exists
+            indexes = self.pc.list_indexes()
+            if index_name not in indexes.names():
+                return  # Index doesn't exist, nothing to delete
+
+            # Delete the index
+            self.pc.delete_index(index_name)
+            logging.info(f"Pinecone index {index_name} deleted")
+
+        except Exception as e:
+            raise VectorStoreError(
+                f"Failed to delete Pinecone index '{index_name}': {str(e)}"
+            )
