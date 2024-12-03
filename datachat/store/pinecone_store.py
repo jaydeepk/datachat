@@ -1,5 +1,7 @@
 import logging
+import time
 from typing import List, Dict, Any
+from fastapi.background import P
 from pinecone import Pinecone, ServerlessSpec
 
 from datachat.core.config import Config, PineconeConfig
@@ -19,7 +21,8 @@ class PineconeStore(VectorStore):
     def get_index(self, index_name):
         indexes = self.pc.list_indexes()
         if index_name not in indexes.names():
-            return self.pc.create_index(
+            logging.info(f"Creating index: {index_name}")
+            self.pc.create_index(
                 name=index_name,
                 dimension=1536,  # OpenAI embedding dimension
                 metric="cosine",

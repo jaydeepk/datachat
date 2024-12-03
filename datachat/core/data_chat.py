@@ -1,5 +1,5 @@
-from asyncio import sleep
 import logging
+import time
 from typing import Dict, List, Optional
 
 from attr import dataclass
@@ -44,11 +44,12 @@ class DataChat:
     ):
         index_name = self._get_index_name(dataset_name)
 
+        logging.info(f"Registering dataset: {dataset_name}")
+
         self.dataset_repo.upsert_dataset(
             Dataset(dataset_name, index_name, system_prompt)
         )
 
-        print("Upserting doucments in Pinecone db...")
         vectors = [
             (
                 document.id,
@@ -58,11 +59,12 @@ class DataChat:
             for document in documents
         ]
         self.vector_store.upsert(index_name, vectors=vectors)
-        print("Finished upserting doucments in Pinecone db")
 
-        print("Waiting for vectors to be indexed...")
+        logging.info("Waiting for vectors to be indexed...")
         self._wait_for_indexing()
-        print("Vectors are now indexed and ready for querying")
+        logging.info("Vectors are now indexed and ready for querying")
+
+        logging.info(f"Finished registering dataset: {dataset_name}")
 
     def generate_response(self, dataset_name, user_query: str, top_k: int = 100) -> str:
         """Generate a response for a dataset based on the user query and relevant context.
@@ -128,10 +130,9 @@ class DataChat:
             logging.error(f"Failed to delete dataset '{dataset_name}': {str(e)}")
             raise
 
-    def _wait_for_indexing(self, timeout: int = 20, initial_delay: int = 5):
-        """Wait for vectors to be indexed and queryable"""
+    def _wait_for_indexing(self, delay: int = 10):
         # Initial delay to allow indexing to start
-        sleep(initial_delay)
+        time.sleep(delay)
 
     def _get_index_name(self, dataset_name):
         return "datachat-" + dataset_name
