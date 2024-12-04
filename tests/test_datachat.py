@@ -63,7 +63,9 @@ class TestDataChat:
 
             session_documents = [SessionDocument(session) for session in session_data]
             data_chat = DataChat()
-            data_chat.register("conf-sessions-test", session_documents, system_prompt)
+            data_chat.register_dataset(
+                "conf-sessions-test", session_documents, system_prompt
+            )
 
             yield data_chat
 
@@ -107,7 +109,6 @@ class TestDataChat:
         data_chat: DataChat,
         query: str,
         expected_answer: str,
-        session_data: List[Dict[str, Any]],
     ):
         """Test Q&A responses using multiple evaluation metrics"""
         # Get actual response

@@ -2,7 +2,6 @@ import logging
 import time
 from typing import Dict, List, Optional
 
-from attr import dataclass
 
 from datachat.core.document import Document
 from datachat.store.pinecone_store import PineconeStore
@@ -28,7 +27,7 @@ class DataChat:
         """
 
         self.config = config or Config.load()
-        self.dataset_repo = DatasetRepository()
+        self.repo = DatasetRepository()
 
         print()
         self.vector_store = PineconeStore(self.config.pinecone)
@@ -39,16 +38,14 @@ class DataChat:
             k=memory_size, return_messages=True
         )
 
-    def register(
+    def register_dataset(
         self, dataset_name: str, documents: List[Document], system_prompt: str
     ):
         index_name = self._get_index_name(dataset_name)
 
         logging.info(f"Registering dataset: {dataset_name}")
 
-        self.dataset_repo.upsert_dataset(
-            Dataset(dataset_name, index_name, system_prompt)
-        )
+        self.repo.upsert_dataset(Dataset(dataset_name, index_name, system_prompt))
 
         vectors = [
             (
@@ -76,7 +73,7 @@ class DataChat:
             Generated response from the chat model
         """
         # Get relevant context from vector store
-        dataset: Dataset = self.dataset_repo.get_dataset(dataset_name)
+        dataset: Dataset = self.repo.get_dataset(dataset_name)
         if not dataset:
             raise Exception(f"Dataset {dataset_name} not found")
 
@@ -113,7 +110,7 @@ class DataChat:
             Exception: If deletion fails
         """
         # Check if dataset exists
-        dataset: Dataset = self.dataset_repo.get_dataset(dataset_name)
+        dataset: Dataset = self.repo.get_dataset(dataset_name)
         if not dataset:
             raise ValueError(f"Dataset '{dataset_name}' not found")
 
@@ -122,7 +119,7 @@ class DataChat:
             self.vector_store.delete(dataset.index_name)
 
             # Delete from SQLite
-            self.dataset_repo.delete_dataset(dataset_name)
+            self.repo.delete_dataset(dataset_name)
 
             logging.info(f"Successfully deleted dataset '{dataset_name}'")
 

@@ -54,7 +54,7 @@ async def upload_data(
 
     try:
         documents = [document_class(item) for item in data]
-        data_chat.register(dataset_name, documents, payload.system_prompt)
+        data_chat.register_dataset(dataset_name, documents, payload.system_prompt)
         return UploadResponse(
             message=f"Dataset '{dataset_name}' uploaded and processed successfully"
         )
