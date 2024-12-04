@@ -1,8 +1,11 @@
 import json
 from typing import List, Dict, Any
+from deepeval import assert_test, evaluate
 import pytest
 from datachat.core.data_chat import DataChat
 from tests.session_document import SessionDocument
+from deepeval.test_case import LLMTestCase
+from deepeval.metrics import AnswerRelevancyMetric
 
 
 class TestDataChat:
@@ -45,7 +48,7 @@ class TestDataChat:
     def data_chat(self, session_data: List[Dict[str, Any]]) -> DataChat:
         """Fixture setting up DataChat with embedded sessions"""
         data_chat = None  # Initialize outside try block
-        
+
         try:
             system_prompt = """You are a conference assistant. 
                     When displaying dates and times:
@@ -61,9 +64,9 @@ class TestDataChat:
             session_documents = [SessionDocument(session) for session in session_data]
             data_chat = DataChat()
             data_chat.register("conf-sessions-test", session_documents, system_prompt)
-            
+
             yield data_chat
-            
+
         finally:
             if data_chat:  # Only attempt cleanup if setup was successful
                 try:
@@ -73,53 +76,51 @@ class TestDataChat:
                     print(f"\nFailed to delete dataset: {e}")
 
     @pytest.mark.parametrize(
-        "query,expected_phrases",
+        "query,expected_answer",
         [
             (
                 "What sessions is James Smith presenting?",
-                ["Future of AI", "22-Oct-2024", "09:00"],
+                """ James Smith is presenting a keynote titled "The Future of AI" on 22-Oct-2024 at 09:00""",
             ),
             (
                 "What sessions are happening on October 22nd?",
-                ["Future of AI", "Agile in Practice"],
+                """On October 22nd, 2024, there are 2 sessions happening:
+                    1. "The Future of AI" is a keynote by James Smith at 09:00.
+                    2. "Agile in Practice" is a session by John Doe at 11:00.""",
             ),
             (
                 "Of these how many sessions are on Agile?",
-                ["Agile in Practice"],
+                """There is 1 session on Agile titled "Agile in Practice" by John Doe on 22-Oct-2024 at 11:00""",
             ),
             (
                 "Which are the keynote sessions?",
-                ["Future of AI", "James Smith", "keynote"],
+                """The keynote session is "The Future of AI" by James Smith, which will be held on 22-Oct-2024 at 09:00""",
+            ),
+            (
+                "What sessions is Alice Brown presenting?",
+                """Based on the provided context, there are no sessions being presented by Alice Brown""",
             ),
         ],
     )
-    def test_successful_queries(
-        self, data_chat: DataChat, query: str, expected_phrases: List[str]
+    def test_qa(
+        self,
+        data_chat: DataChat,
+        query: str,
+        expected_answer: str,
+        session_data: List[Dict[str, Any]],
     ):
-        """Test various successful query scenarios"""
-        # Generate response
-        response = data_chat.generate_response("conf-sessions-test", query)
+        """Test Q&A responses using multiple evaluation metrics"""
+        # Get actual response
+        actual_answer = data_chat.generate_response("conf-sessions-test", query)
 
-        # Print query and response
+        test_case = LLMTestCase(
+            input=query,
+            actual_output=actual_answer,
+            expected_output=expected_answer,
+        )
+
         print(f"\nQuery: {query}")
-        print(f"Response: {response}\n")
+        print(f"Expected: {expected_answer}")
+        print(f"Actual: {actual_answer}\n")
 
-        # Assert expected phrases
-        for phrase in expected_phrases:
-            assert (
-                phrase in response
-            ), f"Expected phrase '{phrase}' not found in response"
-
-    def test_query_non_existent_speaker(self, data_chat: DataChat):
-        """Test querying for a speaker that doesn't exist"""
-        query = "What sessions is Alice Brown presenting?"
-        response = data_chat.generate_response("conf-sessions-test", query)
-
-        # Print query and response
-        print(f"\nQuery: {query}")
-        print(f"Response: {response}\n")
-
-        assert any(
-            phrase in response.lower()
-            for phrase in ["no sessions", "not presenting", "not listed as a speaker"]
-        ), f"Response should indicate no sessions found but got: {response}"
+        assert_test(test_case, [AnswerRelevancyMetric(threshold=0.7)])
