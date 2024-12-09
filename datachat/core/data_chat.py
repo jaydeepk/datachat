@@ -95,9 +95,14 @@ class DataChat:
             ]
         )
 
-        return self.inference_model.generate_response(
+        response = self.inference_model.generate_response(
             context, user_query, dataset.system_prompt, history_text
         )
+
+        # Save the interaction to memory
+        self.memory.save_context({"input": user_query}, {"output": response})
+
+        return response
 
     def delete_dataset(self, dataset_name: str) -> None:
         """Delete a dataset from both SQLite and Pinecone
